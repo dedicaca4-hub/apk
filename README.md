@@ -150,6 +150,7 @@ Anda juga bisa langsung menyalin file foto wajah ke dalam folder `targets/`.
 | **`Q`** atau **`ESC`** | Keluar dari aplikasi dan menutup kamera. |
 | **`S`** | Ambil foto wajah saat ini dan daftarkan nama baru. |
 | **`R`** | Muat ulang (*reload*) database wajah dari folder `targets/`. |
+| **`O`** | Putar rotasi layar live (-90° / 90° per tekan) jika posisi kamera miring/terbalik. |
 | **`H`** | Sembunyikan / tampilkan banner HUD status di atas layar. |
 | **`L`** | Sembunyikan / tampilkan 5 titik kunci wajah (*landmarks*). |
 
@@ -166,8 +167,9 @@ python app.py [opsi...]
 | Opsi | Default | Penjelasan |
 | :--- | :---: | :--- |
 | `--source` | `0` | Sumber kamera: angka `0` untuk webcam laptop, atau URL streaming HTTP/RTSP untuk kamera HP. |
+| `--rotate` | `0` | Rotasi video dalam derajat: `90`, `180`, `270`, atau `-90` (sangat berguna untuk kamera HP portrait/miring). |
 | `--threshold` | `0.50` | Batas ambang Cosine Similarity (skala 0.0 - 1.0). Skor di atas threshold dikenali sebagai nama orang; di bawah threshold dianggap `Unknown`. |
-| `--model` | `buffalo_sc` | Pilihan model InsightFace: `buffalo_sc` (ringan & cepat untuk CPU) atau `buffalo_l` (akurasi maksimal). |
+| `--model` | `buffalo_sc` | Pilihan model InsightFace: `buffalo_sc` (ringan & cepat untuk CPU) atau `buffalo_l` (akurasi maksimal + Tebak Umur & Gender). |
 | `--width` | `None` | Mengubah lebar resolusi video (misal: `--width 1280`). |
 | `--height` | `None` | Mengubah tinggi resolusi video (misal: `--height 720`). |
 | `--targets` | `targets` | Folder tempat penyimpanan foto referensi wajah. |

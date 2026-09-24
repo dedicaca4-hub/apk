@@ -53,6 +53,18 @@ def ask_person_name_gui() -> Optional[str]:
     return name
 
 
+def apply_rotation(frame: np.ndarray, angle: int) -> np.ndarray:
+    """Merotasi frame sesuai derajat (90, 180, 270, atau -90)."""
+    norm_angle = angle % 360
+    if norm_angle == 90:
+        return cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE)
+    elif norm_angle == 180:
+        return cv2.rotate(frame, cv2.ROTATE_180)
+    elif norm_angle == 270:
+        return cv2.rotate(frame, cv2.ROTATE_90_COUNTERCLOCKWISE)
+    return frame
+
+
 def parse_arguments():
     parser = argparse.ArgumentParser(
         description="Aplikasi Real-Time Face Recognition (InsightFace)",
@@ -82,6 +94,13 @@ def parse_arguments():
         type=str,
         default="targets",
         help="Folder penyimpanan foto referensi wajah terdaftar",
+    )
+    parser.add_argument(
+        "--rotate",
+        type=int,
+        default=0,
+        choices=[0, 90, 180, 270, -90, -180, -270],
+        help="Rotasi video dalam derajat: 90, 180, 270, atau -90 (sangat berguna untuk kamera HP portrait)",
     )
     parser.add_argument(
         "--gpu",
@@ -120,6 +139,9 @@ def main():
     print(f"• Sumber Video : {args.source}")
     print(f"• Database Dir : {args.targets}/")
     print(f"• Akselerasi   : {'GPU (CUDA)' if args.gpu else 'CPU'}")
+    current_rotation = args.rotate % 360
+    if current_rotation != 0:
+        print(f"• Rotasi Awal  : {current_rotation}° (dapat ditekan 'O' untuk memutar)")
     print("=" * 60 + "\n")
 
     # Inisialisasi FaceSystem
@@ -167,6 +189,7 @@ def main():
     print("  • [Q] atau [ESC] : Keluar")
     print("  • [S]           : Daftarkan wajah yang sedang ada di layar")
     print("  • [R]           : Reload database wajah dari folder targets/")
+    print("  • [O]           : Putar rotasi layar (-90° / 90° live)")
     print("  • [H]           : Tampilkan / Sembunyikan HUD atas")
     print("  • [L]           : Tampilkan / Sembunyikan titik landmark wajah\n")
 
@@ -191,6 +214,10 @@ def main():
                 if not ret:
                     print("[INFO] Koneksi video terputus. Keluar.")
                     break
+
+            # Terapkan rotasi jika diatur (misal kamera HP / RTSP portrait)
+            if current_rotation != 0:
+                frame = apply_rotation(frame, current_rotation)
 
             # Opsional resize frame jika resolusi terlalu besar untuk mempercepat proses CPU
             if args.width and args.height and not isinstance(source, int):
@@ -217,6 +244,7 @@ def main():
                 source_name=source_label,
                 show_landmarks=show_landmarks,
                 show_hud=show_hud,
+                rotation=current_rotation,
             )
 
             # Tampilkan pesan status sementara jika ada (misal setelah registrasi wajah)
@@ -258,6 +286,13 @@ def main():
             elif key in [ord("r"), ord("R")]:
                 count = face_system.reload_targets()
                 status_message = f"Database di-reload: {count} wajah aktif"
+                status_time = time.time()
+                print(f"[INFO] {status_message}")
+
+            elif key in [ord("o"), ord("O")]:
+                # Putar rotasi -90 derajat live
+                current_rotation = (current_rotation - 90) % 360
+                status_message = f"Rotasi layar diubah ke: {current_rotation}°"
                 status_time = time.time()
                 print(f"[INFO] {status_message}")
 

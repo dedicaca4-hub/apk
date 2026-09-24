@@ -30,7 +30,19 @@ import numpy as np
 from face_system import FaceSystem
 
 
-def capture_from_camera(source, person_name: str, targets_dir: str = "targets", model_name: str = "buffalo_sc"):
+def apply_rotation(frame: np.ndarray, angle: int) -> np.ndarray:
+    """Merotasi frame sesuai derajat (90, 180, 270, atau -90)."""
+    norm_angle = angle % 360
+    if norm_angle == 90:
+        return cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE)
+    elif norm_angle == 180:
+        return cv2.rotate(frame, cv2.ROTATE_180)
+    elif norm_angle == 270:
+        return cv2.rotate(frame, cv2.ROTATE_90_COUNTERCLOCKWISE)
+    return frame
+
+
+def capture_from_camera(source, person_name: str, targets_dir: str = "targets", model_name: str = "buffalo_sc", rotate: int = 0):
     """Membuka kamera dengan preview interaktif untuk mengambil foto wajah terbaik."""
     print(f"\n[INFO] Menginisialisasi model InsightFace ({model_name})...")
     face_system = FaceSystem(model_name=model_name, targets_dir=targets_dir)
@@ -42,6 +54,7 @@ def capture_from_camera(source, person_name: str, targets_dir: str = "targets", 
         print(f"[ERROR] Gagal membuka kamera sumber: {source}")
         return False
 
+    current_rotation = rotate % 360
     window_name = f"Pendaftaran Wajah: {person_name} (Tekan SPASI untuk Ambil Foto)"
     cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
 
@@ -49,6 +62,7 @@ def capture_from_camera(source, person_name: str, targets_dir: str = "targets", 
     print("Instruksi:")
     print("  • Posisikan wajah Anda di tengah layar dan hadap ke depan.")
     print("  • Tekan [SPASI] untuk mengambil foto.")
+    print("  • Tekan [O] untuk memutar rotasi layar (-90° / 90° live).")
     print("  • Tekan [Q] atau [ESC] untuk membatalkan.\n")
 
     captured = False
@@ -56,6 +70,9 @@ def capture_from_camera(source, person_name: str, targets_dir: str = "targets", 
         ret, frame = cap.read()
         if not ret or frame is None:
             continue
+
+        if current_rotation != 0:
+            frame = apply_rotation(frame, current_rotation)
 
         h, w, _ = frame.shape
         display = frame.copy()
@@ -77,8 +94,9 @@ def capture_from_camera(source, person_name: str, targets_dir: str = "targets", 
             status_text = "Peringatan: Terdeteksi lebih dari 1 wajah!"
 
         # Banner info atas
+        rot_label = f" | Rot: {current_rotation}°" if current_rotation != 0 else ""
         cv2.rectangle(display, (0, 0), (w, 50), (20, 20, 20), -1)
-        cv2.putText(display, f"Mendaftarkan: {person_name}", (15, 25), cv2.FONT_HERSHEY_DUPLEX, 0.6, (255, 255, 255), 1)
+        cv2.putText(display, f"Mendaftarkan: {person_name}{rot_label}", (15, 25), cv2.FONT_HERSHEY_DUPLEX, 0.6, (255, 255, 255), 1)
         cv2.putText(display, status_text, (15, 43), cv2.FONT_HERSHEY_DUPLEX, 0.45, status_color, 1)
 
         cv2.imshow(window_name, display)
@@ -87,6 +105,9 @@ def capture_from_camera(source, person_name: str, targets_dir: str = "targets", 
         if key in [ord("q"), ord("Q"), 27]:
             print("[INFO] Pendaftaran dibatalkan.")
             break
+        elif key in [ord("o"), ord("O")]:
+            current_rotation = (current_rotation - 90) % 360
+            print(f"[INFO] Rotasi diubah ke: {current_rotation}°")
         elif key == 32:  # SPASI
             if len(faces) == 0:
                 print("[WARNING] Tidak ada wajah terdeteksi! Mohon hadap ke kamera.")
@@ -218,6 +239,7 @@ def main():
     parser = argparse.ArgumentParser(description="Tool Pendaftaran Wajah InsightFace")
     parser.add_argument("--name", type=str, default=None, help="Nama orang yang akan didaftarkan")
     parser.add_argument("--source", type=str, default="0", help="Sumber kamera (0 untuk webcam, atau URL HP)")
+    parser.add_argument("--rotate", type=int, default=0, choices=[0, 90, 180, 270, -90, -180, -270], help="Rotasi kamera dalam derajat (90, 180, 270, atau -90)")
     parser.add_argument("--import", dest="import_path", type=str, default=None, help="Path file foto untuk diimpor")
     parser.add_argument("--targets", type=str, default="targets", help="Direktori database target")
     parser.add_argument("--list", action="store_true", help="Tampilkan daftar wajah terdaftar")
@@ -231,7 +253,7 @@ def main():
             args.name = Path(args.import_path).stem
         import_from_file(args.import_path, args.name, args.targets)
     elif args.name:
-        capture_from_camera(args.source, args.name, args.targets)
+        capture_from_camera(args.source, args.name, args.targets, rotate=args.rotate)
     else:
         interactive_menu()
 

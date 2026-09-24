@@ -235,6 +235,7 @@ class FaceSystem:
         source_name: str = "Webcam",
         show_landmarks: bool = True,
         show_hud: bool = True,
+        rotation: int = 0,
     ) -> np.ndarray:
         """
         Menggambar visual bounding box modern, label nama, score similarity, dan HUD status di atas frame.
@@ -318,9 +319,10 @@ class FaceSystem:
             # Garis pemisah bawah HUD tipis
             cv2.line(out, (0, hud_h), (w, hud_h), (60, 70, 80), 1)
 
-            # Info kiri: FPS & Model
+            # Info kiri: FPS & Model & Rotasi
             fps_str = f"FPS: {fps:.1f}" if fps is not None else "FPS: --"
-            info_left = f"{fps_str}  |  Model: {self.model_name}  |  Thresh: {self.threshold:.2f}"
+            rot_str = f"  |  Rot: {rotation}°" if rotation != 0 else ""
+            info_left = f"{fps_str}  |  Model: {self.model_name}{rot_str}  |  Thresh: {self.threshold:.2f}"
             cv2.putText(out, info_left, (12, 23), cv2.FONT_HERSHEY_DUPLEX, 0.45, (220, 220, 220), 1, cv2.LINE_AA)
 
             # Info kanan: Database & Source
@@ -330,7 +332,7 @@ class FaceSystem:
             cv2.putText(out, info_right, (w - ir_w - 12, 23), cv2.FONT_HERSHEY_DUPLEX, 0.45, COLOR_ACCENT, 1, cv2.LINE_AA)
 
             # Footer tipis petunjuk tombol di bawah layar
-            footer_text = "[Q] Keluar   [S] Daftar Wajah   [R] Reload DB   [H] Toggle HUD"
+            footer_text = "[Q] Keluar   [S] Daftar Wajah   [R] Reload DB   [O] Rotasi   [H] HUD"
             (ft_w, _), _ = cv2.getTextSize(footer_text, cv2.FONT_HERSHEY_DUPLEX, 0.40, 1)
             f_y = h - 10
             # Background transparan tipis untuk footer
