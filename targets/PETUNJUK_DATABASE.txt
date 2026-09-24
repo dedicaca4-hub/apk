@@ -1,0 +1,20 @@
+# Folder Database Wajah (Targets)
+
+Letakkan foto wajah orang yang ingin dikenali di dalam folder ini.
+Format nama file akan otomatis menjadi nama orang yang dikenali.
+
+Contoh struktur file:
+targets/
+  ├── Budi.jpg
+  ├── Siti_Rahma.png
+  └── Joko_Widodo.jpeg
+
+Tips agar pengenalan akurat:
+1. Pastikan foto memiliki pencahayaan yang cukup.
+2. Wajah menghadap ke depan tanpa terhalang masker tebal / kacamata hitam pekat.
+3. Hanya perlu 1 foto per orang, namun jika ingin lebih akurat di berbagai sudut, Anda juga bisa membuat subfolder:
+   targets/
+     └── Budi/
+           ├── depan.jpg
+           ├── senyum.jpg
+           └── miring.jpg
