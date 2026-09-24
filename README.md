@@ -1,5 +1,10 @@
 # x - Aplikasi Real-Time Face Recognition (InsightFace)
 
+
+```sh
+python app.py --model buffalo_l --source http://192.168.1.50:8080/video
+```
+
 Aplikasi pengenalan wajah (*face recognition*) real-time berbasis **Python** dan **InsightFace**. Aplikasi ini dirancang agar dapat langsung digunakan menggunakan **webcam laptop** ataupun **kamera HP** (via Wi-Fi / IP Webcam stream), dengan performa tinggi dan akurat bahkan di CPU laptop biasa.
 
 ---
