@@ -47,7 +47,11 @@ class FaceSystem:
         # Inisialisasi model InsightFace
         providers = ["CUDAExecutionProvider", "CPUExecutionProvider"] if use_gpu else ["CPUExecutionProvider"]
         print(f"[INFO] Memuat model InsightFace '{model_name}' (providers: {providers})...")
-        self.app = FaceAnalysis(name=model_name, providers=providers)
+        allowed_modules = ["detection", "recognition", "genderage"] if model_name == "buffalo_l" else None
+        if allowed_modules:
+            self.app = FaceAnalysis(name=model_name, providers=providers, allowed_modules=allowed_modules)
+        else:
+            self.app = FaceAnalysis(name=model_name, providers=providers)
         self.app.prepare(ctx_id=0, det_size=det_size)
         print("[INFO] Model InsightFace siap digunakan.")
 
@@ -208,12 +212,17 @@ class FaceSystem:
             is_known = best_score >= self.threshold
             label = best_match["name"] if is_known else "Unknown"
 
+            age = int(round(face.age)) if hasattr(face, "age") and face.age is not None else None
+            gender = ("L" if face.gender == 1 else "P") if hasattr(face, "gender") and face.gender is not None else None
+
             results.append({
                 "bbox": face.bbox.astype(int),
                 "name": label,
                 "similarity": max(0.0, min(1.0, best_score)),
                 "is_known": is_known,
                 "landmarks": face.kps.astype(int) if face.kps is not None else None,
+                "age": age,
+                "gender": gender,
             })
 
         return results
@@ -246,6 +255,8 @@ class FaceSystem:
             score = res["similarity"]
             is_known = res["is_known"]
             landmarks = res["landmarks"]
+            age = res.get("age")
+            gender = res.get("gender")
 
             color = COLOR_KNOWN if is_known else COLOR_UNKNOWN
 
@@ -263,11 +274,12 @@ class FaceSystem:
                 for pt in landmarks:
                     cv2.circle(out, (int(pt[0]), int(pt[1])), 2, (0, 255, 255), -1)
 
-            # 3. Label Tag (Nama + Persentase Kemiripan)
+            # 3. Label Tag (Nama + Estimasi Umur/Gender + Persentase Kemiripan)
+            attr_str = f" [{age}th, {gender}]" if age is not None and gender is not None else ""
             if is_known:
-                text = f"{name} ({score * 100:.1f}%)"
+                text = f"{name}{attr_str} ({score * 100:.1f}%)"
             else:
-                text = f"Unknown ({score * 100:.1f}%)" if score > 0.1 else "Unknown"
+                text = f"Unknown{attr_str} ({score * 100:.1f}%)" if score > 0.1 else f"Unknown{attr_str}"
 
             font = cv2.FONT_HERSHEY_DUPLEX
             font_scale = 0.55

@@ -69,7 +69,7 @@ def parse_arguments():
         type=str,
         default="buffalo_sc",
         choices=["buffalo_sc", "buffalo_l"],
-        help="Model InsightFace: 'buffalo_sc' (cepat, cocok untuk CPU) atau 'buffalo_l' (sangat presisi)",
+        help="Model InsightFace: 'buffalo_sc' (cepat di CPU) atau 'buffalo_l' (sangat presisi + Tebak Umur & Gender)",
     )
     parser.add_argument(
         "--threshold",

@@ -11,17 +11,18 @@ Aplikasi pengenalan wajah (*face recognition*) real-time berbasis **Python** dan
    - Sangat tahan terhadap sudut miring wajah, ekspresi, dan variasi pencahayaan.
 2. **Ringan & Cepat di CPU Laptop**:
    - Menggunakan model teroptimasi `buffalo_sc` (hanya ~15 MB), memberikan FPS tinggi tanpa memerlukan GPU khusus.
-   - Opsi model `buffalo_l` tersedia jika menginginkan akurasi maksimal.
-3. **Fleksibel untuk Berbagai Sumber Kamera**:
+3. **Estimasi Umur & Jenis Kelamin (Age & Gender)**:
+   - Dengan model `buffalo_l`, sistem otomatis memprediksi perkiraan usia (umur) dan gender setiap wajah di kamera secara live (misal: `[33th, L]`).
+4. **Fleksibel untuk Berbagai Sumber Kamera**:
    - Langsung mendeteksi webcam laptop bawaan (indeks `0`).
    - Mendukung streaming kamera HP secara wireless lewat aplikasi seperti *IP Webcam*, *DroidCam*, atau *RTSP/HTTP stream*.
-4. **Pendaftaran Wajah Sangat Mudah (3 Cara)**:
+5. **Pendaftaran Wajah Sangat Mudah (3 Cara)**:
    - **Live In-App**: Tekan tombol **`S`** saat kamera aktif untuk langsung mendaftarkan wajah.
    - **Skrip Registrasi Interaktif**: Jalankan `python register.py` dengan panduan visual.
    - **Folder Manual**: Cukup letakkan file foto di dalam folder `targets/` (misal: `targets/Budi.jpg`).
-5. **Tampilan Visual Modern**:
+6. **Tampilan Visual Modern**:
    - Desain bounding box dengan aksen sudut (*corner brackets*).
-   - Tag label nama orang dan persentase skor kemiripan (*similarity score*).
+   - Tag label nama orang, umur, gender, dan persentase skor kemiripan (*similarity score*).
    - HUD atas menampilkan FPS real-time, status model, dan jumlah wajah terdaftar.
    - Hot-reload database wajah secara instan tanpa perlu mematikan aplikasi (tekan tombol **`R`**).
 
