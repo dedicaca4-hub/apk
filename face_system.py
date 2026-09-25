@@ -574,7 +574,7 @@ class FaceSystem:
             rot_str = f" | Rot: {rotation}°" if rotation != 0 else ""
             mir_str = " | Cermin" if is_mirrored else ""
             age_str = f" | Usia: {'ON' if show_age else 'OFF'}"
-            info_left = f"FaceAI | {fps_str} | {self.model_name}{rot_str}{mir_str}{age_str} | Thresh: {self.threshold:.2f}"
+            info_left = f"ipweb | {fps_str} | {self.model_name}{rot_str}{mir_str}{age_str} | Thresh: {self.threshold:.2f}"
             cv2.putText(out, info_left, (12, 23), cv2.FONT_HERSHEY_DUPLEX, 0.45, (220, 220, 220), 1, cv2.LINE_AA)
 
             reg_count = self.get_registered_person_count()

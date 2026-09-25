@@ -219,7 +219,7 @@ def interactive_menu(targets_dir: str = "targets"):
     """Tampilan menu interaktif jika skrip dijalankan tanpa argumen."""
     while True:
         print("\n" + "=" * 50)
-        print("       FaceAI - PENDAFTARAN WAJAH (ENROLLMENT)")
+        print("       ipweb - PENDAFTARAN WAJAH (ENROLLMENT)")
         print("=" * 50)
         print("  1. Ambil foto langsung dari Webcam / Kamera HP")
         print("  2. Impor foto dari file di laptop/komputer")
@@ -259,7 +259,7 @@ def interactive_menu(targets_dir: str = "targets"):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="FaceAI - Tool Pendaftaran Wajah InsightFace")
+    parser = argparse.ArgumentParser(description="ipweb - Tool Pendaftaran Wajah InsightFace")
     parser.add_argument("--name", type=str, default=None, help="Nama orang yang akan didaftarkan")
     parser.add_argument("--source", type=str, default="0", help="Sumber kamera (0 untuk webcam, atau URL HP)")
     parser.add_argument("--rotate", type=int, default=0, choices=[0, 90, 180, 270, -90, -180, -270], help="Rotasi kamera dalam derajat (90, 180, 270, atau -90)")

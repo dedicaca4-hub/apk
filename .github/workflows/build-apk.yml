@@ -52,11 +52,11 @@ jobs:
       - name: Prepare APK Output
         run: |
           mkdir -p output-apk
-          cp android/app/build/outputs/apk/debug/app-debug.apk output-apk/FaceAI-v1.0-debug.apk
+          cp android/app/build/outputs/apk/debug/app-debug.apk output-apk/ipweb-v1.0-debug.apk
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: FaceAI-v1.0-APK
-          path: output-apk/FaceAI-v1.0-debug.apk
+          name: ipweb-v1.0-APK
+          path: output-apk/ipweb-v1.0-debug.apk
           retention-days: 30

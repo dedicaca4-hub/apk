@@ -1,10 +1,10 @@
-# FaceAI - Real-Time Face Recognition & Age Detector
+# ipweb - Real-Time Face Recognition & Age Detector Mobile App
 
 ```sh
 python app.py --model buffalo_l --source http://192.168.1.50:50050/video
 ```
 
-**FaceAI** adalah aplikasi pengenalan wajah (*face recognition*), deteksi usia, dan estimasi gender real-time berbasis **Python**, **InsightFace**, serta tersedia dalam versi **Android Standalone APK / PWA**. Aplikasi ini dirancang agar dapat langsung digunakan menggunakan **webcam laptop** ataupun **kamera HP** (via Wi-Fi / IP Webcam stream), dengan performa tinggi dan akurat bahkan di CPU laptop biasa.
+**ipweb** adalah aplikasi pengenalan wajah (*face recognition*), deteksi usia, dan estimasi gender real-time berbasis **Python**, **InsightFace**, serta tersedia dalam versi **Android Standalone APK / PWA**. Aplikasi ini dirancang agar dapat langsung digunakan menggunakan **webcam laptop** ataupun **kamera HP** (via Wi-Fi / IP Webcam stream), dengan performa tinggi dan akurat bahkan di CPU laptop biasa.
 
 ---
 
@@ -220,7 +220,7 @@ Server HTTPS lokal akan aktif pada port **`50050`** dan otomatis mencetak alamat
    - Klik **Lanjutan (Advanced)** ➔ Pilih **Lanjutkan ke alamat IP (Proceed to unsafe)**.
 4. Izinkan akses kamera HP saat muncul pop-up perizinan.
 5. Klik tombol titik tiga di kanan atas Chrome ➔ Pilih **"Tambahkan ke Layar Utama"** atau klik tombol **"Install APK"** yang muncul di layar.
-6. Aplikasi **FaceAI** kini resmi terpasang di HP Anda dengan ikon aplikasi tersendiri, layar penuh (*fullscreen standalone* tanpa bar URL browser), dan berjalan on-device!
+6. Aplikasi **ipweb** kini resmi terpasang di HP Anda dengan ikon aplikasi tersendiri, layar penuh (*fullscreen standalone* tanpa bar URL browser), dan berjalan on-device!
 
 ---
 

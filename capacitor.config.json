@@ -1,6 +1,6 @@
 {
-  "appId": "com.faceai.detector",
-  "appName": "FaceAI",
+  "appId": "com.ipweb.detector",
+  "appName": "ipweb",
   "webDir": "pwa",
   "server": {
     "androidScheme": "https",

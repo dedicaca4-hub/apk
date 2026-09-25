@@ -29,3 +29,15 @@ if "android.permission.CAMERA" not in content:
     print("[INFO] AndroidManifest.xml berhasil dikonfigurasi dengan izin Kamera!")
 else:
     print("[INFO] Izin kamera sudah ada di AndroidManifest.xml.")
+
+
+strings_path = Path("android/app/src/main/res/values/strings.xml")
+if strings_path.exists():
+    with open(strings_path, "r", encoding="utf-8") as sf:
+        s_content = sf.read()
+    import re
+    s_content = re.sub(r'<string name="app_name">.*?</string>', '<string name="app_name">ipweb</string>', s_content)
+    s_content = re.sub(r'<string name="title_activity_main">.*?</string>', '<string name="title_activity_main">ipweb</string>', s_content)
+    with open(strings_path, "w", encoding="utf-8") as sf:
+        sf.write(s_content)
+    print("[INFO] strings.xml berhasil disetel dengan nama app: ipweb")

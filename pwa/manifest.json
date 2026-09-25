@@ -1,6 +1,6 @@
 {
-  "name": "FaceAI",
-  "short_name": "FaceAI",
+  "name": "ipweb",
+  "short_name": "ipweb",
   "description": "Aplikasi Real-Time Face Recognition, Estimasi Usia & Gender On-Device",
   "start_url": "./",
   "scope": "./",

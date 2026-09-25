@@ -60,7 +60,7 @@ def ensure_ssl_cert(pwa_dir: Path) -> tuple[Path, Path]:
             openssl_bin, "req", "-x509", "-newkey", "rsa:2048",
             "-keyout", str(key_file), "-out", str(cert_file),
             "-days", "365", "-nodes",
-            "-subj", "/CN=FaceAI-PWA"
+            "-subj", "/CN=ipweb-PWA"
         ]
         try:
             subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -144,7 +144,7 @@ class PWAHandler(http.server.SimpleHTTPRequestHandler):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Server PWA FaceAI untuk HP Android & iOS")
+    parser = argparse.ArgumentParser(description="Server PWA ipweb untuk HP Android & iOS")
     parser.add_argument("--port", type=int, default=50050, help="Port server HTTPS (default: 50050)")
     parser.add_argument("--http", action="store_true", help="Jalankan di mode HTTP biasa tanpa SSL (port default: 50050)")
     args = parser.parse_args()
@@ -179,7 +179,7 @@ def main():
             pass
 
     print("\n" + "=" * 65)
-    print("      FACEAI - PWA STANDALONE ON-DEVICE MOBILE SERVER")
+    print("      IPWEB - PWA STANDALONE ON-DEVICE MOBILE SERVER")
     print("=" * 65)
     print(f"* Status Server   : BERJALAN ({protocol.upper()})")
     print(f"* Alamat Lokal PC : {protocol}://localhost:{port}")
@@ -196,7 +196,7 @@ def main():
         print(f"   - Pilih 'Proceed to {local_ip} (unsafe)'")
     print("5. Izinkan akses kamera HP saat muncul pop-up izin.")
     print("6. Tekan tombol menu Chrome (titik 3 di kanan atas) -> Pilih 'Tambahkan ke Layar Utama' (Install App).")
-    print("   Aplikasi FaceAI akan terpasang di HP Anda dan dapat dibuka seperti aplikasi APK!")
+    print("   Aplikasi ipweb akan terpasang di HP Anda dan dapat dibuka seperti aplikasi APK!")
     print("\nTekan Ctrl+C di terminal ini untuk mematikan server.")
     print("-" * 65 + "\n")
 
