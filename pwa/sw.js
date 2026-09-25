@@ -1,5 +1,5 @@
 // Service Worker for FaceAI Standalone PWA
-const CACHE_NAME = 'faceai-v1';
+const CACHE_NAME = 'faceai-v2';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',

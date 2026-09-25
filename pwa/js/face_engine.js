@@ -114,18 +114,26 @@ class FaceEngine {
   }
 
   /**
-   * Ekstraksi Float32 Tensor dari crop wajah untuk input model ONNX InsightFace.
-   * Input format: NCHW [1, 3, targetH, targetW], Mean: 127.5, Std: 128.0
+   * Ekstraksi Float32 Tensor untuk model genderage.onnx.
+   * Model genderage.onnx InsightFace memerlukan:
+   * - Resolusi: 96x96
+   * - Margin crop: 1.5x di sekitar pusat wajah (mencakup dahi, rambut, dan dagu)
+   * - Format input: NCHW [1, 3, 96, 96], Channel RGB
+   * - Nilai piksel: Float32 RAW dalam rentang [0.0, 255.0] (mean=0.0, std=1.0)
+   * PENTING: Jangan normalisasi dengan (val - 127.5) / 128 karena nilai mendekati 0
+   * akan menyebabkan model selalu memprediksi usia 35 dan gender wanita!
    */
-  _createTensorFromCrop(videoElement, box, targetW, targetH) {
+  _createGenderAgeTensor(videoElement, box) {
+    const targetW = 96;
+    const targetH = 96;
     this.cropCanvas.width = targetW;
     this.cropCanvas.height = targetH;
 
     const vw = videoElement.videoWidth || 640;
     const vh = videoElement.videoHeight || 480;
 
-    // Pastikan crop persegi proporsional di sekitar pusat wajah agar bentuk wajah tidak gepeng/terdistorsi
-    const maxDim = Math.max(box.width, box.height) * 1.15;
+    // Margin 1.5x agar mencakup rambut, dahi, telinga, dan dagu sesuai training InsightFace
+    const maxDim = Math.max(box.width, box.height) * 1.5;
     const cx = box.x + box.width / 2;
     const cy = box.y + box.height / 2;
 
@@ -141,15 +149,53 @@ class FaceEngine {
     const floatData = new Float32Array(3 * targetW * targetH);
     const planeSize = targetW * targetH;
 
-    // Konversi HWC (RGBA) ke CHW (RGB) dengan normalisasi (val - 127.5) / 128.0
+    // Format NCHW: CHW [3, 96, 96], Channel RGB, Rentang [0.0, 255.0]
     for (let i = 0; i < planeSize; i++) {
-      const r = data[i * 4 + 0];
-      const g = data[i * 4 + 1];
-      const b = data[i * 4 + 2];
+      floatData[i] = data[i * 4 + 0];                 // Red plane [0..255]
+      floatData[planeSize + i] = data[i * 4 + 1];     // Green plane [0..255]
+      floatData[2 * planeSize + i] = data[i * 4 + 2]; // Blue plane [0..255]
+    }
 
-      floatData[i] = (r - 127.5) / 128.0;                // Red plane
-      floatData[planeSize + i] = (g - 127.5) / 128.0;    // Green plane
-      floatData[2 * planeSize + i] = (b - 127.5) / 128.0;// Blue plane
+    return new ort.Tensor('float32', floatData, [1, 3, targetH, targetW]);
+  }
+
+  /**
+   * Ekstraksi Float32 Tensor untuk model pengenalan MobileFaceNet (w600k_mbf.onnx).
+   * Model ArcFace InsightFace memerlukan:
+   * - Resolusi: 112x112
+   * - Margin crop: 1.25x di sekitar pusat wajah
+   * - Format input: NCHW [1, 3, 112, 112], Channel RGB
+   * - Normalisasi: (val - 127.5) / 127.5 rentang [-1.0, 1.0]
+   */
+  _createRecognitionTensor(videoElement, box) {
+    const targetW = 112;
+    const targetH = 112;
+    this.cropCanvas.width = targetW;
+    this.cropCanvas.height = targetH;
+
+    const vw = videoElement.videoWidth || 640;
+    const vh = videoElement.videoHeight || 480;
+
+    const maxDim = Math.max(box.width, box.height) * 1.25;
+    const cx = box.x + box.width / 2;
+    const cy = box.y + box.height / 2;
+
+    const sx = Math.max(0, Math.min(vw - maxDim, cx - maxDim / 2));
+    const sy = Math.max(0, Math.min(vh - maxDim, cy - maxDim / 2));
+    const sw = Math.min(maxDim, vw - sx);
+    const sh = Math.min(maxDim, vh - sy);
+
+    this.cropCtx.drawImage(videoElement, sx, sy, sw, sh, 0, 0, targetW, targetH);
+    const imgData = this.cropCtx.getImageData(0, 0, targetW, targetH);
+    const data = imgData.data;
+
+    const floatData = new Float32Array(3 * targetW * targetH);
+    const planeSize = targetW * targetH;
+
+    for (let i = 0; i < planeSize; i++) {
+      floatData[i] = (data[i * 4 + 0] - 127.5) / 127.5;
+      floatData[planeSize + i] = (data[i * 4 + 1] - 127.5) / 127.5;
+      floatData[2 * planeSize + i] = (data[i * 4 + 2] - 127.5) / 127.5;
     }
 
     return new ort.Tensor('float32', floatData, [1, 3, targetH, targetW]);
@@ -162,13 +208,14 @@ class FaceEngine {
     if (!this.sessionGenderAge) return { age: null, gender: null };
 
     try {
-      // Input shape genderage.onnx: [1, 3, 96, 96]
-      const tensor = this._createTensorFromCrop(videoElement, box, 96, 96);
+      // Input shape genderage.onnx: [1, 3, 96, 96] dengan piksel RGB [0..255]
+      const tensor = this._createGenderAgeTensor(videoElement, box);
       const output = await this.sessionGenderAge.run({ data: tensor });
-      const pred = output.fc1.data; // Float32Array[3] -> [female_prob, male_prob, normalized_age]
+      const pred = output.fc1.data; // Float32Array[3] -> [female_logit, male_logit, normalized_age]
 
+      // InsightFace: pred[0] = Wanita, pred[1] = Pria
       const isMale = pred[1] > pred[0];
-      const rawAge = pred[2] * 100.0;
+      const rawAge = Math.max(1, Math.min(100, pred[2] * 100.0));
 
       // Stabilkan usia dan gender dengan filter multi-frame tracking
       const tracked = this._smoothAgeAndGender(box, rawAge, isMale);
@@ -191,8 +238,7 @@ class FaceEngine {
     if (!this.sessionRecognition) return null;
 
     try {
-      // Input shape w600k_mbf.onnx: [1, 3, 112, 112]
-      const tensor = this._createTensorFromCrop(videoElement, box, 112, 112);
+      const tensor = this._createRecognitionTensor(videoElement, box);
       const output = await this.sessionRecognition.run({ 'input.1': tensor });
       const rawEmbedding = output['516'].data; // Float32Array[512]
 

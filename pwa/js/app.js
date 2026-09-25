@@ -322,10 +322,27 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Setup Event Listeners
 
   // 1. Tombol Shutter (Daftarkan Wajah)
-  btnShutter.addEventListener('click', () => {
+  btnShutter.addEventListener('click', async () => {
     if (!lastCapturedFace) {
       showToast('Wajah tidak terdeteksi di kamera!', true);
       return;
+    }
+
+    // Evaluasi ulang estimasi usia dan gender langsung saat shutter ditekan agar akurasi maksimal
+    if (window.faceEngine.isLoaded && lastCapturedFace.box) {
+      try {
+        const freshAge = await window.faceEngine.estimateAgeAndGender(video, lastCapturedFace.box);
+        if (freshAge && freshAge.age !== null) {
+          lastCapturedFace.age = freshAge.age;
+          lastCapturedFace.gender = freshAge.gender;
+        }
+        const freshEmb = await window.faceEngine.extractEmbedding(video, lastCapturedFace.box);
+        if (freshEmb) {
+          lastCapturedFace.embedding = freshEmb;
+        }
+      } catch (err) {
+        console.warn('Re-evaluating face stats on shutter:', err);
+      }
     }
 
     enrollThumb.src = lastCapturedFace.snapshot;
@@ -469,7 +486,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 await window.faceDB.addFace({
                   name: t.name,
                   photo: t.photo,
-                  embedding: []
+                  embedding: t.embedding || []
                 });
               }
               updateDbBadge();

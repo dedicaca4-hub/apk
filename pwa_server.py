@@ -111,6 +111,15 @@ class PWAHandler(http.server.SimpleHTTPRequestHandler):
         targets_data = []
 
         if targets_dir.exists():
+            emb_map = {}
+            try:
+                from face_system import FaceSystem
+                fs = FaceSystem(model_name="buffalo_sc", targets_dir=str(targets_dir))
+                for kf in fs.known_faces:
+                    emb_map[kf["file"]] = kf["embedding"].tolist()
+            except Exception as e:
+                print(f"[WARNING] Gagal mengekstrak embedding untuk /api/targets: {e}")
+
             for item in targets_dir.iterdir():
                 if item.is_file() and item.suffix.lower() in valid_ext:
                     name = item.stem.replace("_", " ")
@@ -120,7 +129,8 @@ class PWAHandler(http.server.SimpleHTTPRequestHandler):
                         mime = "image/png" if item.suffix.lower() == ".png" else "image/jpeg"
                         targets_data.append({
                             "name": name,
-                            "photo": f"data:{mime};base64,{b64}"
+                            "photo": f"data:{mime};base64,{b64}",
+                            "embedding": emb_map.get(item.name, []),
                         })
                     except Exception:
                         pass
