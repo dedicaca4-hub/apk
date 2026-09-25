@@ -26,11 +26,11 @@ jobs:
           node-version: 20
           cache: 'npm'
 
-      - name: Setup Java JDK 17
+      - name: Setup Java JDK 21
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '17'
+          java-version: '21'
 
       - name: Install NPM Dependencies
         run: |
@@ -43,16 +43,26 @@ jobs:
 
       - name: Configure Android Permissions in AndroidManifest.xml
         run: |
-          MANIFEST_FILE="android/app/src/main/AndroidManifest.xml"
-          if [ -f "$MANIFEST_FILE" ]; then
-            sed -i '/<application/i \    <uses-permission android:name="android.permission.CAMERA" />\n    <uses-permission android:name="android.permission.INTERNET" />\n    <uses-feature android:name="android.hardware.camera" android:required="false" />\n    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />' "$MANIFEST_FILE"
-          fi
+          python3 -c "
+          manifest_path = 'android/app/src/main/AndroidManifest.xml'
+          with open(manifest_path, 'r', encoding='utf-8') as f:
+              data = f.read()
+          perms = '''    <uses-permission android:name=\"android.permission.CAMERA\" />
+      <uses-feature android:name=\"android.hardware.camera\" android:required=\"false\" />
+      <uses-feature android:name=\"android.hardware.camera.autofocus\" android:required=\"false\" />
+  <application'''
+          if 'android.permission.CAMERA' not in data:
+              data = data.replace('<application', perms)
+              with open(manifest_path, 'w', encoding='utf-8') as f:
+                  f.write(data)
+          print('AndroidManifest updated successfully!')
+          "
 
       - name: Build Debug APK with Gradle
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug --stacktrace
+          ./gradlew assembleDebug --no-daemon --stacktrace
 
       - name: Prepare APK Output
         run: |
