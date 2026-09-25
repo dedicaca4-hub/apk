@@ -8,7 +8,7 @@ Penggunaan:
         python app.py
 
     Kamera HP (IP Webcam Android / iOS):
-        python app.py --source http://192.168.1.50:8080/video
+        python app.py --source http://192.168.1.50:50050/video
 
     Menggunakan model buffalo_l untuk akurasi maksimal:
         python app.py --model buffalo_l --threshold 0.55
@@ -74,7 +74,7 @@ def parse_arguments():
         "--source",
         type=str,
         default="0",
-        help="Sumber video: '0' untuk webcam bawaan laptop, atau URL seperti 'http://192.168.1.50:8080/video' untuk kamera HP",
+        help="Sumber video: '0' untuk webcam bawaan laptop, atau URL seperti 'http://192.168.1.50:50050/video' untuk kamera HP",
     )
     parser.add_argument(
         "--model",
@@ -125,6 +125,16 @@ def parse_arguments():
         default=0,
         help="Proses deteksi setiap N frame untuk menghemat daya CPU (0 = proses setiap frame)",
     )
+    parser.add_argument(
+        "--hide-age",
+        action="store_true",
+        help="Sembunyikan estimasi usia wajah pada tampilan kamera",
+    )
+    parser.add_argument(
+        "--hide-gender",
+        action="store_true",
+        help="Sembunyikan estimasi jenis kelamin pada tampilan kamera",
+    )
     return parser.parse_args()
 
 
@@ -139,6 +149,7 @@ def main():
     print(f"• Sumber Video : {args.source}")
     print(f"• Database Dir : {args.targets}/")
     print(f"• Akselerasi   : {'GPU (CUDA)' if args.gpu else 'CPU'}")
+    print(f"• Estimasi Usia: {'Nonaktif' if args.hide_age else 'Aktif'}")
     current_rotation = args.rotate % 360
     if current_rotation != 0:
         print(f"• Rotasi Awal  : {current_rotation}° (dapat ditekan 'O' untuk memutar)")
@@ -188,6 +199,8 @@ def main():
     print("Navigasi Tombol:")
     print("  • [Q] atau [ESC] : Keluar")
     print("  • [S]           : Daftarkan wajah yang sedang ada di layar")
+    print("  • [A]           : Tampilkan / Sembunyikan estimasi usia wajah")
+    print("  • [G]           : Tampilkan / Sembunyikan jenis kelamin (gender)")
     print("  • [R]           : Reload database wajah dari folder targets/")
     print("  • [O]           : Putar rotasi layar (-90° / 90° live)")
     print("  • [H]           : Tampilkan / Sembunyikan HUD atas")
@@ -198,6 +211,8 @@ def main():
     cached_results = []
     show_hud = True
     show_landmarks = True
+    show_age = not args.hide_age
+    show_gender = not args.hide_gender
     status_message = ""
     status_time = 0.0
 
@@ -244,6 +259,8 @@ def main():
                 source_name=source_label,
                 show_landmarks=show_landmarks,
                 show_hud=show_hud,
+                show_age=show_age,
+                show_gender=show_gender,
                 rotation=current_rotation,
             )
 
@@ -282,6 +299,18 @@ def main():
                     print(f"[{'SUCCESS' if ok else 'FAILED'}] {msg}")
                 else:
                     print("[INFO] Pendaftaran dibatalkan.")
+
+            elif key in [ord("a"), ord("A")]:
+                show_age = not show_age
+                status_message = f"Pendeteksi Usia: {'AKTIF' if show_age else 'NONAKTIF'}"
+                status_time = time.time()
+                print(f"[INFO] {status_message}")
+
+            elif key in [ord("g"), ord("G")]:
+                show_gender = not show_gender
+                status_message = f"Pendeteksi Gender: {'AKTIF' if show_gender else 'NONAKTIF'}"
+                status_time = time.time()
+                print(f"[INFO] {status_message}")
 
             elif key in [ord("r"), ord("R")]:
                 count = face_system.reload_targets()

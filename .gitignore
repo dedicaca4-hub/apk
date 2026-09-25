@@ -67,7 +67,9 @@ tempCodeRunnerFile.py
 # Logs
 *.log
 
-# ==========================================
+# Local SSL Certificates
+*.pem
+
 # Database foto wajah (Privacy Protection)
 # Jangan upload foto pribadi ke repository!
 # ==========================================

@@ -2,7 +2,7 @@
 
 
 ```sh
-python app.py --model buffalo_l --source http://192.168.1.50:8080/video
+python app.py --model buffalo_l --source http://192.168.1.50:50050/video
 ```
 
 Aplikasi pengenalan wajah (*face recognition*) real-time berbasis **Python** dan **InsightFace**. Aplikasi ini dirancang agar dapat langsung digunakan menggunakan **webcam laptop** ataupun **kamera HP** (via Wi-Fi / IP Webcam stream), dengan performa tinggi dan akurat bahkan di CPU laptop biasa.
@@ -17,7 +17,9 @@ Aplikasi pengenalan wajah (*face recognition*) real-time berbasis **Python** dan
 2. **Ringan & Cepat di CPU Laptop**:
    - Menggunakan model teroptimasi `buffalo_sc` (hanya ~15 MB), memberikan FPS tinggi tanpa memerlukan GPU khusus.
 3. **Estimasi Umur & Jenis Kelamin (Age & Gender)**:
-   - Dengan model `buffalo_l`, sistem otomatis memprediksi perkiraan usia (umur) dan gender setiap wajah di kamera secara live (misal: `[33th, L]`).
+   - Otomatis aktif baik pada model CPU ringan `buffalo_sc` maupun `buffalo_l`.
+   - Menggunakan filter stabilisasi (EMA) sehingga angka umur stabil dan tidak berkedip/flicker antar frame.
+   - Dapat dinyalakan/dimatikan kapan saja secara live dengan menekan tombol **`A`** (Usia) dan **`G`** (Gender).
 4. **Fleksibel untuk Berbagai Sumber Kamera**:
    - Langsung mendeteksi webcam laptop bawaan (indeks `0`).
    - Mendukung streaming kamera HP secara wireless lewat aplikasi seperti *IP Webcam*, *DroidCam*, atau *RTSP/HTTP stream*.
@@ -85,12 +87,12 @@ Anda bisa menjadikan kamera HP beresolusi tinggi sebagai sumber kamera komputer 
 2. **Jalankan server di HP**:
    - Sambungkan HP dan Laptop ke jaringan **Wi-Fi yang sama** (atau hotspot HP ke laptop).
    - Di aplikasi *IP Webcam*, scroll ke paling bawah dan pilih **"Start server"**.
-   - Di layar HP akan muncul alamat URL, misalnya: `http://192.168.1.50:8080`
+   - Di layar HP akan muncul alamat URL, misalnya: `http://192.168.1.50:50050`
 3. **Jalankan aplikasi dengan URL kamera HP**:
    ```powershell
-   python app.py --source http://192.168.1.50:8080/video
+   python app.py --source http://192.168.1.50:50050/video
    ```
-   *(Ganti `192.168.1.50:8080` sesuai IP yang tertera di layar HP Anda, dan tambahkan `/video` di belakangnya)*.
+   *(Ganti `192.168.1.50:50050` sesuai IP yang tertera di layar HP Anda, dan tambahkan `/video` di belakangnya)*.
 
 ---
 
@@ -121,7 +123,7 @@ Anda bisa menggunakan skrip khusus untuk mendaftarkan wajah:
   *(Arahkan wajah ke kotak hijau di layar lalu tekan **SPASI** untuk mengambil foto)*.
 - **Ambil foto via kamera HP**:
   ```powershell
-  python register.py --name "Siti Rahma" --source http://192.168.1.50:8080/video
+  python register.py --name "Siti Rahma" --source http://192.168.1.50:50050/video
   ```
 - **Impor dari file foto yang sudah ada di laptop**:
   ```powershell
@@ -149,6 +151,8 @@ Anda juga bisa langsung menyalin file foto wajah ke dalam folder `targets/`.
 | :---: | :--- |
 | **`Q`** atau **`ESC`** | Keluar dari aplikasi dan menutup kamera. |
 | **`S`** | Ambil foto wajah saat ini dan daftarkan nama baru. |
+| **`A`** | Sembunyikan / tampilkan estimasi usia wajah (*toggle live*). |
+| **`G`** | Sembunyikan / tampilkan estimasi jenis kelamin/gender (*toggle live*). |
 | **`R`** | Muat ulang (*reload*) database wajah dari folder `targets/`. |
 | **`O`** | Putar rotasi layar live (-90° / 90° per tekan) jika posisi kamera miring/terbalik. |
 | **`H`** | Sembunyikan / tampilkan banner HUD status di atas layar. |
@@ -169,7 +173,9 @@ python app.py [opsi...]
 | `--source` | `0` | Sumber kamera: angka `0` untuk webcam laptop, atau URL streaming HTTP/RTSP untuk kamera HP. |
 | `--rotate` | `0` | Rotasi video dalam derajat: `90`, `180`, `270`, atau `-90` (sangat berguna untuk kamera HP portrait/miring). |
 | `--threshold` | `0.50` | Batas ambang Cosine Similarity (skala 0.0 - 1.0). Skor di atas threshold dikenali sebagai nama orang; di bawah threshold dianggap `Unknown`. |
-| `--model` | `buffalo_sc` | Pilihan model InsightFace: `buffalo_sc` (ringan & cepat untuk CPU) atau `buffalo_l` (akurasi maksimal + Tebak Umur & Gender). |
+| `--model` | `buffalo_sc` | Pilihan model InsightFace: `buffalo_sc` (ringan & cepat untuk CPU) atau `buffalo_l` (akurasi ekstra). Keduanya kini mendukung estimasi usia & gender. |
+| `--hide-age` | `False` | Sembunyikan estimasi usia wajah sejak awal aplikasi dijalankan. |
+| `--hide-gender` | `False` | Sembunyikan jenis kelamin (gender) sejak awal aplikasi dijalankan. |
 | `--width` | `None` | Mengubah lebar resolusi video (misal: `--width 1280`). |
 | `--height` | `None` | Mengubah tinggi resolusi video (misal: `--height 720`). |
 | `--targets` | `targets` | Folder tempat penyimpanan foto referensi wajah. |
@@ -183,8 +189,32 @@ python app.py [opsi...]
   ```
 - **Kamera HP dengan resolusi diatur ke 720p**:
   ```powershell
-  python app.py --source http://192.168.1.50:8080/video --width 1280 --height 720
+  python app.py --source http://192.168.1.50:50050/video --width 1280 --height 720
   ```
+
+---
+
+## 📱 Versi Mobile Standalone (Install ke HP Android)
+
+Jika Anda ingin menjalankan Face Recognition, Deteksi Usia, dan Gender langsung di layar ponsel **seperti aplikasi APK native** tanpa perlu install Android Studio / SDK:
+
+### 1. Jalankan Server PWA Lokal di Komputer
+Buka terminal dan jalankan:
+
+```powershell
+python pwa_server.py
+```
+
+Server HTTPS lokal akan aktif dan otomatis mencetak alamat LAN laptop Anda (misalnya: `https://192.168.1.15:8443`).
+
+### 2. Buka di HP Android & Pasang (Install)
+1. Sambungkan HP dan Laptop ke jaringan **Wi-Fi atau Hotspot yang sama**.
+2. Buka **Google Chrome** di HP Anda dan ketik URL yang tertera di terminal (misal: `https://192.168.1.15:8443`).
+3. Jika muncul pesan peringatan *"Your connection is not private"* (karena sertifikat SSL lokal):
+   - Klik **Lanjutan (Advanced)** ➔ Pilih **Lanjutkan ke alamat IP (Proceed to unsafe)**.
+4. Izinkan akses kamera HP saat muncul pop-up perizinan.
+5. Klik tombol titik tiga di kanan atas Chrome ➔ Pilih **"Tambahkan ke Layar Utama"** atau klik tombol **"Install APK"** yang muncul di layar.
+6. Aplikasi **FaceAI** kini resmi terpasang di HP Anda dengan ikon aplikasi tersendiri, layar penuh (*fullscreen standalone* tanpa bar URL browser), dan berjalan on-device!
 
 ---
 

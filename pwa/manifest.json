@@ -1,0 +1,26 @@
+{
+  "name": "FaceAI - Face Recognition & Age Detector",
+  "short_name": "FaceAI",
+  "description": "Aplikasi Real-Time Face Recognition, Estimasi Usia & Gender On-Device",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0a0d14",
+  "theme_color": "#00e599",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["utilities", "productivity"]
+}

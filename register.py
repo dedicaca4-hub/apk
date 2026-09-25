@@ -12,7 +12,7 @@ Penggunaan:
        python register.py --name "Budi Santoso"
 
     3. Ambil dari kamera HP:
-       python register.py --name "Siti Rahma" --source http://192.168.1.50:8080/video
+       python register.py --name "Siti Rahma" --source http://192.168.1.50:50050/video
 
     4. Impor dari file foto di laptop:
        python register.py --import "C:/Users/.../foto.jpg" --name "Joko"
@@ -83,10 +83,14 @@ def capture_from_camera(source, person_name: str, targets_dir: str = "targets", 
         status_text = "Mencari wajah..."
 
         if len(faces) == 1:
-            status_color = (0, 255, 0)
-            status_text = "Wajah terdeteksi! Tekan [SPASI] untuk Ambil Foto"
-            # Gambar kotak panduan
             f = faces[0]
+            age = int(round(f.age)) if hasattr(f, "age") and f.age is not None else None
+            gender = ("Laki-laki" if f.gender == 1 else "Perempuan") if hasattr(f, "gender") and f.gender is not None else None
+            attr_info = f" | Usia: ~{age} th ({gender})" if age is not None else ""
+
+            status_color = (0, 255, 0)
+            status_text = f"Wajah terdeteksi{attr_info}! Tekan [SPASI] untuk Ambil Foto"
+            # Gambar kotak panduan
             x1, y1, x2, y2 = f.bbox.astype(int)
             cv2.rectangle(display, (x1, y1), (x2, y2), status_color, 2)
         elif len(faces) > 1:
@@ -116,8 +120,13 @@ def capture_from_camera(source, person_name: str, targets_dir: str = "targets", 
                 print("[WARNING] Terdeteksi lebih dari 1 orang! Pastikan hanya ada Anda di depan kamera.")
                 continue
 
+            f = faces[0]
+            age = int(round(f.age)) if hasattr(f, "age") and f.age is not None else None
+            gender = ("Laki-laki" if f.gender == 1 else "Perempuan") if hasattr(f, "gender") and f.gender is not None else None
+            age_info = f" (Estimasi Usia: ~{age} tahun, {gender})" if age is not None else ""
+
             ok, msg = face_system.register_face_from_frame(frame, person_name)
-            print(f"\n[{'BERHASIL' if ok else 'GAGAL'}] {msg}")
+            print(f"\n[{'BERHASIL' if ok else 'GAGAL'}] {msg}{age_info}")
             if ok:
                 captured = True
                 # Tampilkan efek flash visual sebentar
@@ -155,12 +164,17 @@ def import_from_file(file_path: str, person_name: str, targets_dir: str = "targe
         print("[ERROR] Wajah tidak ditemukan pada gambar tersebut.")
         return False
 
+    best_face = max(faces, key=lambda f: (f.bbox[2] - f.bbox[0]) * (f.bbox[3] - f.bbox[1]))
+    age = int(round(best_face.age)) if hasattr(best_face, "age") and best_face.age is not None else None
+    gender = ("Laki-laki" if best_face.gender == 1 else "Perempuan") if hasattr(best_face, "gender") and best_face.gender is not None else None
+    age_str = f" [Estimasi Usia: ~{age} tahun, {gender}]" if age is not None else ""
+
     dest_dir = Path(targets_dir)
     dest_dir.mkdir(parents=True, exist_ok=True)
     dest_file = dest_dir / f"{person_name.replace(' ', '_')}{path.suffix.lower()}"
 
     shutil.copy(str(path), str(dest_file))
-    print(f"[BERHASIL] Foto berhasil diimpor sebagai: {dest_file.name}")
+    print(f"[BERHASIL] Foto berhasil diimpor sebagai: {dest_file.name}{age_str}")
     print(f"Total wajah terdeteksi pada foto: {len(faces)}")
     return True
 

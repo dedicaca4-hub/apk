@@ -1,0 +1,9 @@
+{
+  "appId": "com.faceai.detector",
+  "appName": "FaceAI",
+  "webDir": "pwa",
+  "server": {
+    "androidScheme": "https",
+    "cleartext": true
+  }
+}

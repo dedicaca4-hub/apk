@@ -44,19 +44,49 @@ class FaceSystem:
         # Struktur data wajah terdaftar: list dict {"name": str, "embedding": np.ndarray}
         self.known_faces: List[Dict[str, any]] = []
 
+        # Tracker untuk menstabilkan estimasi usia agar tidak berkedip/flicker antar frame
+        self._age_tracks: Dict[int, Dict[str, any]] = {}
+        self._next_track_id: int = 0
+        self._frame_index: int = 0
+
+        # Pastikan modul estimasi usia & gender tersedia (hanya ~1.3 MB)
+        self._ensure_genderage_model(model_name)
+
         # Inisialisasi model InsightFace
         providers = ["CUDAExecutionProvider", "CPUExecutionProvider"] if use_gpu else ["CPUExecutionProvider"]
         print(f"[INFO] Memuat model InsightFace '{model_name}' (providers: {providers})...")
-        allowed_modules = ["detection", "recognition", "genderage"] if model_name == "buffalo_l" else None
-        if allowed_modules:
-            self.app = FaceAnalysis(name=model_name, providers=providers, allowed_modules=allowed_modules)
-        else:
-            self.app = FaceAnalysis(name=model_name, providers=providers)
+        allowed_modules = ["detection", "recognition", "genderage"]
+        self.app = FaceAnalysis(name=model_name, providers=providers, allowed_modules=allowed_modules)
         self.app.prepare(ctx_id=0, det_size=det_size)
-        print("[INFO] Model InsightFace siap digunakan.")
+        print("[INFO] Model InsightFace siap digunakan (Deteksi Wajah, Pengenalan, dan Estimasi Usia aktif).")
 
         # Muat database wajah yang tersimpan di folder targets
         self.reload_targets()
+
+    @staticmethod
+    def _ensure_genderage_model(model_name: str) -> bool:
+        """
+        Memastikan bobot model genderage.onnx (~1.3 MB) tersedia di folder model InsightFace.
+        Model ini memungkinkan estimasi usia dan gender bekerja bahkan pada model ringan (buffalo_sc).
+        """
+        model_dir = Path.home() / ".insightface" / "models" / model_name
+        ga_file = model_dir / "genderage.onnx"
+        if ga_file.exists():
+            return True
+
+        # Jika folder model belum terbentuk, buat direktorinya
+        model_dir.mkdir(parents=True, exist_ok=True)
+
+        url = "https://huggingface.co/public-data/insightface/resolve/main/models/buffalo_l/genderage.onnx"
+        print(f"[INFO] Mengunduh modul estimasi usia wajah (~1.3 MB) untuk '{model_name}'...")
+        try:
+            import urllib.request
+            urllib.request.urlretrieve(url, str(ga_file))
+            print(f"[INFO] Modul usia berhasil diunduh ke: {ga_file.name}")
+            return True
+        except Exception as e:
+            print(f"[WARNING] Tidak dapat mengunduh model usia otomatis ({e}). Estimasi usia mungkin tidak aktif.")
+            return False
 
     @staticmethod
     def _normalize(vector: np.ndarray) -> np.ndarray:
@@ -169,6 +199,69 @@ class FaceSystem:
         unique_names = {item["name"] for item in self.known_faces}
         return len(unique_names)
 
+    @staticmethod
+    def _calc_iou(boxA: np.ndarray, boxB: np.ndarray) -> float:
+        """Menghitung Intersection over Union (IoU) antara dua bounding box [x1, y1, x2, y2]."""
+        xA = max(boxA[0], boxB[0])
+        yA = max(boxA[1], boxB[1])
+        xB = min(boxA[2], boxB[2])
+        yB = min(boxA[3], boxB[3])
+
+        interArea = max(0, xB - xA) * max(0, yB - yA)
+        boxAArea = max(1, (boxA[2] - boxA[0]) * (boxA[3] - boxA[1]))
+        boxBArea = max(1, (boxB[2] - boxB[0]) * (boxB[3] - boxB[1]))
+
+        iou = interArea / float(boxAArea + boxBArea - interArea)
+        return float(iou)
+
+    def _smooth_age(self, bbox: np.ndarray, raw_age: Optional[float]) -> Optional[int]:
+        """
+        Menstabilkan estimasi usia menggunakan filter Moving Average (EMA).
+        Mencegah angka usia melompat-lompat / berkedip setiap frame pada video live.
+        """
+        if raw_age is None:
+            return None
+
+        self._frame_index += 1
+        best_id = None
+        best_iou = 0.35
+
+        for track_id, data in list(self._age_tracks.items()):
+            iou = self._calc_iou(bbox, data["bbox"])
+            if iou > best_iou:
+                best_iou = iou
+                best_id = track_id
+
+        if best_id is not None:
+            # 85% bobot riwayat sebelumnya + 15% bobot frame baru untuk kestabilan visual
+            smoothed = 0.85 * self._age_tracks[best_id]["age"] + 0.15 * raw_age
+            self._age_tracks[best_id] = {
+                "bbox": bbox,
+                "age": smoothed,
+                "last_seen": self._frame_index,
+            }
+            res_age = int(round(smoothed))
+        else:
+            new_id = self._next_track_id
+            self._next_track_id += 1
+            self._age_tracks[new_id] = {
+                "bbox": bbox,
+                "age": float(raw_age),
+                "last_seen": self._frame_index,
+            }
+            res_age = int(round(raw_age))
+
+        # Bersihkan track lama yang tidak terlihat lebih dari 45 frame (~1.5 detik)
+        if self._frame_index % 30 == 0:
+            stale_ids = [
+                tid for tid, d in self._age_tracks.items()
+                if self._frame_index - d["last_seen"] > 45
+            ]
+            for tid in stale_ids:
+                del self._age_tracks[tid]
+
+        return res_age
+
     def recognize_frame(self, frame: np.ndarray) -> List[Dict]:
         """
         Mendeteksi semua wajah di dalam frame dan mencocokkannya dengan database wajah.
@@ -178,6 +271,8 @@ class FaceSystem:
         - similarity: skor kemiripan (0.0 - 1.0)
         - is_known: boolean True jika di atas threshold
         - landmarks: 5 titik kunci wajah (mata, hidung, mulut)
+        - age: estimasi usia yang sudah distabilkan
+        - gender: 'L' (Laki-laki) atau 'P' (Perempuan)
         """
         faces = self.app.get(frame)
         results = []
@@ -188,12 +283,20 @@ class FaceSystem:
         # Jika database kosong, semua wajah ditandai Unknown
         if len(self.known_faces) == 0:
             for face in faces:
+                bbox_int = face.bbox.astype(int)
+                raw_age = float(face.age) if hasattr(face, "age") and face.age is not None else None
+                age = self._smooth_age(bbox_int, raw_age)
+                gender = ("L" if face.gender == 1 else "P") if hasattr(face, "gender") and face.gender is not None else None
+
                 results.append({
-                    "bbox": face.bbox.astype(int),
+                    "bbox": bbox_int,
                     "name": "Unknown",
                     "similarity": 0.0,
                     "is_known": False,
                     "landmarks": face.kps.astype(int) if face.kps is not None else None,
+                    "age": age,
+                    "raw_age": raw_age,
+                    "gender": gender,
                 })
             return results
 
@@ -212,16 +315,19 @@ class FaceSystem:
             is_known = best_score >= self.threshold
             label = best_match["name"] if is_known else "Unknown"
 
-            age = int(round(face.age)) if hasattr(face, "age") and face.age is not None else None
+            bbox_int = face.bbox.astype(int)
+            raw_age = float(face.age) if hasattr(face, "age") and face.age is not None else None
+            age = self._smooth_age(bbox_int, raw_age)
             gender = ("L" if face.gender == 1 else "P") if hasattr(face, "gender") and face.gender is not None else None
 
             results.append({
-                "bbox": face.bbox.astype(int),
+                "bbox": bbox_int,
                 "name": label,
                 "similarity": max(0.0, min(1.0, best_score)),
                 "is_known": is_known,
                 "landmarks": face.kps.astype(int) if face.kps is not None else None,
                 "age": age,
+                "raw_age": raw_age,
                 "gender": gender,
             })
 
@@ -235,10 +341,12 @@ class FaceSystem:
         source_name: str = "Webcam",
         show_landmarks: bool = True,
         show_hud: bool = True,
+        show_age: bool = True,
+        show_gender: bool = True,
         rotation: int = 0,
     ) -> np.ndarray:
         """
-        Menggambar visual bounding box modern, label nama, score similarity, dan HUD status di atas frame.
+        Menggambar visual bounding box modern, label nama, score similarity, estimasi usia, dan HUD status di atas frame.
         """
         out = frame.copy()
         h, w, _ = out.shape
@@ -275,8 +383,14 @@ class FaceSystem:
                 for pt in landmarks:
                     cv2.circle(out, (int(pt[0]), int(pt[1])), 2, (0, 255, 255), -1)
 
-            # 3. Label Tag (Nama + Estimasi Umur/Gender + Persentase Kemiripan)
-            attr_str = f" [{age}th, {gender}]" if age is not None and gender is not None else ""
+            # 3. Label Tag (Nama + Estimasi Umur / Gender + Persentase Kemiripan)
+            attr_parts = []
+            if show_age and age is not None:
+                attr_parts.append(f"{age}th")
+            if show_gender and gender is not None:
+                attr_parts.append(gender)
+            attr_str = f" [{', '.join(attr_parts)}]" if attr_parts else ""
+
             if is_known:
                 text = f"{name}{attr_str} ({score * 100:.1f}%)"
             else:
@@ -319,10 +433,11 @@ class FaceSystem:
             # Garis pemisah bawah HUD tipis
             cv2.line(out, (0, hud_h), (w, hud_h), (60, 70, 80), 1)
 
-            # Info kiri: FPS & Model & Rotasi
+            # Info kiri: FPS & Model & Rotasi & Status Usia
             fps_str = f"FPS: {fps:.1f}" if fps is not None else "FPS: --"
             rot_str = f"  |  Rot: {rotation}°" if rotation != 0 else ""
-            info_left = f"{fps_str}  |  Model: {self.model_name}{rot_str}  |  Thresh: {self.threshold:.2f}"
+            age_str = f"  |  Usia: {'ON' if show_age else 'OFF'}"
+            info_left = f"{fps_str}  |  Model: {self.model_name}{rot_str}{age_str}  |  Thresh: {self.threshold:.2f}"
             cv2.putText(out, info_left, (12, 23), cv2.FONT_HERSHEY_DUPLEX, 0.45, (220, 220, 220), 1, cv2.LINE_AA)
 
             # Info kanan: Database & Source
@@ -332,10 +447,9 @@ class FaceSystem:
             cv2.putText(out, info_right, (w - ir_w - 12, 23), cv2.FONT_HERSHEY_DUPLEX, 0.45, COLOR_ACCENT, 1, cv2.LINE_AA)
 
             # Footer tipis petunjuk tombol di bawah layar
-            footer_text = "[Q] Keluar   [S] Daftar Wajah   [R] Reload DB   [O] Rotasi   [H] HUD"
+            footer_text = "[Q] Keluar   [S] Daftar Wajah   [A] Usia ON/OFF   [R] Reload DB   [O] Rotasi   [H] HUD"
             (ft_w, _), _ = cv2.getTextSize(footer_text, cv2.FONT_HERSHEY_DUPLEX, 0.40, 1)
             f_y = h - 10
-            # Background transparan tipis untuk footer
             cv2.putText(out, footer_text, ((w - ft_w) // 2, f_y), cv2.FONT_HERSHEY_DUPLEX, 0.40, (180, 180, 180), 1, cv2.LINE_AA)
 
         return out
