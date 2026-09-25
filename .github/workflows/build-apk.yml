@@ -33,8 +33,7 @@ jobs:
           java-version: '21'
 
       - name: Install NPM Dependencies
-        run: |
-          npm install
+        run: npm install
 
       - name: Add & Sync Capacitor Android
         run: |
@@ -42,21 +41,7 @@ jobs:
           npx cap sync android
 
       - name: Configure Android Permissions in AndroidManifest.xml
-        run: |
-          python3 -c "
-          manifest_path = 'android/app/src/main/AndroidManifest.xml'
-          with open(manifest_path, 'r', encoding='utf-8') as f:
-              data = f.read()
-          perms = '''    <uses-permission android:name=\"android.permission.CAMERA\" />
-      <uses-feature android:name=\"android.hardware.camera\" android:required=\"false\" />
-      <uses-feature android:name=\"android.hardware.camera.autofocus\" android:required=\"false\" />
-  <application'''
-          if 'android.permission.CAMERA' not in data:
-              data = data.replace('<application', perms)
-              with open(manifest_path, 'w', encoding='utf-8') as f:
-                  f.write(data)
-          print('AndroidManifest updated successfully!')
-          "
+        run: python scripts/configure_android.py
 
       - name: Build Debug APK with Gradle
         run: |
