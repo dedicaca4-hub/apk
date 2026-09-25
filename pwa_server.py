@@ -149,7 +149,7 @@ def main():
     parser.add_argument("--http", action="store_true", help="Jalankan di mode HTTP biasa tanpa SSL (port default: 50050)")
     args = parser.parse_args()
 
-    port = 8000 if args.http else args.port
+    port = args.port
     local_ip = get_local_ip()
     pwa_dir = Path(__file__).parent / "pwa"
 
@@ -161,7 +161,6 @@ def main():
         if not cert_file or not cert_file.exists():
             print("[WARNING] File sertifikat SSL tidak ditemukan. Beralih ke mode HTTP.")
             use_ssl = False
-            port = 8000
 
     server_address = ("0.0.0.0", port)
     httpd = http.server.ThreadingHTTPServer(server_address, PWAHandler)
@@ -172,18 +171,25 @@ def main():
         context.load_cert_chain(certfile=str(cert_file), keyfile=str(key_file))
         httpd.socket = context.wrap_socket(httpd.socket, server_side=True)
 
+    if sys.platform == "win32":
+        try:
+            sys.stdout.reconfigure(encoding="utf-8", errors="replace", line_buffering=True)
+            sys.stderr.reconfigure(encoding="utf-8", errors="replace", line_buffering=True)
+        except Exception:
+            pass
+
     print("\n" + "=" * 65)
     print("      FACEAI - PWA STANDALONE ON-DEVICE MOBILE SERVER")
     print("=" * 65)
-    print(f"• Status Server   : BERJALAN ({protocol.upper()})")
-    print(f"• Alamat Lokal PC : {protocol}://localhost:{port}")
-    print(f"• Alamat HP (LAN) : {protocol}://{local_ip}:{port}")
+    print(f"* Status Server   : BERJALAN ({protocol.upper()})")
+    print(f"* Alamat Lokal PC : {protocol}://localhost:{port}")
+    print(f"* Alamat HP (LAN) : {protocol}://{local_ip}:{port}")
     print("=" * 65)
-    print("\n📱 CARA MENGHUBUNGKAN DARI HP ANDROID:")
+    print("\n[CARA MENGHUBUNGKAN DARI HP ANDROID]")
     print(f"1. Pastikan HP dan Laptop terhubung ke Wi-Fi / Hotspot yang sama.")
     print(f"2. Buka Google Chrome di HP Anda.")
     print(f"3. Masukkan alamat URL berikut:")
-    print(f"\n      👉   {protocol}://{local_ip}:{port}   👈\n")
+    print(f"\n      >>   {protocol}://{local_ip}:{port}   <<\n")
     if use_ssl:
         print("4. Jika muncul peringatan 'Your connection is not private' (karena SSL lokal):")
         print("   - Klik 'Advanced' (Lanjutan)")
