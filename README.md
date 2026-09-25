@@ -149,9 +149,10 @@ Anda juga bisa langsung menyalin file foto wajah ke dalam folder `targets/`.
 | Tombol | Fungsi |
 | :---: | :--- |
 | **`Q`** atau **`ESC`** | Keluar dari aplikasi dan menutup kamera. |
-| **`S`** | Ambil foto wajah saat ini dan daftarkan nama baru. |
+| **`S`** | Ambil foto wajah saat ini dan daftarkan nama baru ke database. |
 | **`A`** | Sembunyikan / tampilkan estimasi usia wajah (*toggle live*). |
 | **`G`** | Sembunyikan / tampilkan estimasi jenis kelamin/gender (*toggle live*). |
+| **`M`** | Balik video secara horizontal (*mode cermin / mirror webcam*). |
 | **`R`** | Muat ulang (*reload*) database wajah dari folder `targets/`. |
 | **`O`** | Putar rotasi layar live (-90° / 90° per tekan) jika posisi kamera miring/terbalik. |
 | **`H`** | Sembunyikan / tampilkan banner HUD status di atas layar. |
@@ -171,8 +172,10 @@ python app.py [opsi...]
 | :--- | :---: | :--- |
 | `--source` | `0` | Sumber kamera: angka `0` untuk webcam laptop, atau URL streaming HTTP/RTSP untuk kamera HP. |
 | `--rotate` | `0` | Rotasi video dalam derajat: `90`, `180`, `270`, atau `-90` (sangat berguna untuk kamera HP portrait/miring). |
+| `--mirror` | `False` | Aktifkan mode cermin (mirror horizontal) langsung saat aplikasi dijalankan. |
 | `--threshold` | `0.50` | Batas ambang Cosine Similarity (skala 0.0 - 1.0). Skor di atas threshold dikenali sebagai nama orang; di bawah threshold dianggap `Unknown`. |
-| `--model` | `buffalo_sc` | Pilihan model InsightFace: `buffalo_sc` (ringan & cepat untuk CPU) atau `buffalo_l` (akurasi ekstra). Keduanya kini mendukung estimasi usia & gender. |
+| `--det-thresh` | `0.45` | Sensitivitas deteksi wajah SCRFD (0.35 - 0.50). Nilai 0.45 meningkatkan akurasi deteksi pada pose wajah miring atau pencahayaan temaram. |
+| `--model` | `buffalo_sc` | Pilihan model InsightFace: `buffalo_sc` (ringan & cepat untuk CPU) atau `buffalo_l` (akurasi ekstra). Keduanya mendukung estimasi usia & gender. |
 | `--hide-age` | `False` | Sembunyikan estimasi usia wajah sejak awal aplikasi dijalankan. |
 | `--hide-gender` | `False` | Sembunyikan jenis kelamin (gender) sejak awal aplikasi dijalankan. |
 | `--width` | `None` | Mengubah lebar resolusi video (misal: `--width 1280`). |
@@ -182,11 +185,15 @@ python app.py [opsi...]
 | `--gpu` | - | Mengaktifkan akselerasi CUDA GPU jika memiliki kartu grafis NVIDIA dan `onnxruntime-gpu`. |
 
 ### Contoh Penggunaan Kustom:
+- **Webcam laptop dengan mode cermin aktif**:
+  ```powershell
+  python app.py --mirror
+  ```
 - **Tingkatkan ketelitian pencocokan wajah** (mencegah salah kenali orang lain):
   ```powershell
   python app.py --threshold 0.58
   ```
-- **Kamera HP dengan resolusi diatur ke 720p**:
+- **Kamera HP dengan streaming port 50050**:
   ```powershell
   python app.py --source http://192.168.1.50:50050/video --width 1280 --height 720
   ```
@@ -204,11 +211,11 @@ Buka terminal dan jalankan:
 python pwa_server.py
 ```
 
-Server HTTPS lokal akan aktif dan otomatis mencetak alamat LAN laptop Anda (misalnya: `https://192.168.1.15:8443`).
+Server HTTPS lokal akan aktif pada port **`50050`** dan otomatis mencetak alamat LAN laptop Anda (misalnya: `https://192.168.1.15:50050`).
 
 ### 2. Buka di HP Android & Pasang (Install)
 1. Sambungkan HP dan Laptop ke jaringan **Wi-Fi atau Hotspot yang sama**.
-2. Buka **Google Chrome** di HP Anda dan ketik URL yang tertera di terminal (misal: `https://192.168.1.15:8443`).
+2. Buka **Google Chrome** di HP Anda dan ketik URL yang tertera di terminal (misal: `https://192.168.1.15:50050`).
 3. Jika muncul pesan peringatan *"Your connection is not private"* (karena sertifikat SSL lokal):
    - Klik **Lanjutan (Advanced)** ➔ Pilih **Lanjutkan ke alamat IP (Proceed to unsafe)**.
 4. Izinkan akses kamera HP saat muncul pop-up perizinan.
@@ -228,3 +235,6 @@ Server HTTPS lokal akan aktif dan otomatis mencetak alamat LAN laptop Anda (misa
 3. **Threshold Rekomendasi**:
    - Nilai **`0.45` - `0.55`** sangat ideal untuk mengenali wajah meski orang tersebut memakai kacamata atau gaya rambut berubah.
    - Nilai **`0.60` - `0.65`** cocok untuk sistem absensi/keamanan yang memerlukan verifikasi sangat ketat.
+4. **Optimasi Akurasi Pengenalan**:
+   - Daftarkan wajah dengan pencahayaan yang cukup dan menghadap ke depan.
+   - Anda dapat mendaftarkan beberapa foto untuk orang yang sama (misal tampak depan, sedikit miring, dengan kacamata) di dalam folder `targets/Nama_Orang/` agar representasi centroid wajah semakin akurat.

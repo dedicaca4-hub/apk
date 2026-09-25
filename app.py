@@ -81,13 +81,24 @@ def parse_arguments():
         type=str,
         default="buffalo_sc",
         choices=["buffalo_sc", "buffalo_l"],
-        help="Model InsightFace: 'buffalo_sc' (cepat di CPU) atau 'buffalo_l' (sangat presisi + Tebak Umur & Gender)",
+        help="Model InsightFace: 'buffalo_sc' (ringan di CPU) atau 'buffalo_l' (presisi tinggi). Keduanya mendukung usia & gender.",
     )
     parser.add_argument(
         "--threshold",
         type=float,
         default=0.50,
         help="Batas kemiripan Cosine Similarity (0.45 - 0.65 disarankan). Nilai lebih tinggi = verifikasi lebih ketat",
+    )
+    parser.add_argument(
+        "--det-thresh",
+        type=float,
+        default=0.45,
+        help="Batas sensitivitas deteksi wajah (default: 0.45 untuk meningkatkan deteksi pada pose miring/cahaya redup)",
+    )
+    parser.add_argument(
+        "--mirror",
+        action="store_true",
+        help="Aktifkan mode cermin (mirror horizontal) untuk webcam laptop",
     )
     parser.add_argument(
         "--targets",
@@ -145,8 +156,9 @@ def main():
     print("             FaceAI - REAL-TIME FACE RECOGNITION")
     print("=" * 60)
     print(f"• Model        : {args.model}")
-    print(f"• Threshold    : {args.threshold}")
+    print(f"• Threshold    : {args.threshold} (Det Thresh: {args.det_thresh})")
     print(f"• Sumber Video : {args.source}")
+    print(f"• Mode Cermin  : {'Aktif' if args.mirror else 'Nonaktif'}")
     print(f"• Database Dir : {args.targets}/")
     print(f"• Akselerasi   : {'GPU (CUDA)' if args.gpu else 'CPU'}")
     print(f"• Estimasi Usia: {'Nonaktif' if args.hide_age else 'Aktif'}")
@@ -160,6 +172,7 @@ def main():
         face_system = FaceSystem(
             model_name=args.model,
             threshold=args.threshold,
+            det_thresh=args.det_thresh,
             targets_dir=args.targets,
             use_gpu=args.gpu,
         )
@@ -201,6 +214,7 @@ def main():
     print("  • [S]           : Daftarkan wajah yang sedang ada di layar")
     print("  • [A]           : Tampilkan / Sembunyikan estimasi usia wajah")
     print("  • [G]           : Tampilkan / Sembunyikan jenis kelamin (gender)")
+    print("  • [M]           : Balik video horizontal (mode cermin / mirror webcam)")
     print("  • [R]           : Reload database wajah dari folder targets/")
     print("  • [O]           : Putar rotasi layar (-90° / 90° live)")
     print("  • [H]           : Tampilkan / Sembunyikan HUD atas")
@@ -213,6 +227,7 @@ def main():
     show_landmarks = True
     show_age = not args.hide_age
     show_gender = not args.hide_gender
+    is_mirrored = args.mirror
     status_message = ""
     status_time = 0.0
 
@@ -233,6 +248,10 @@ def main():
             # Terapkan rotasi jika diatur (misal kamera HP / RTSP portrait)
             if current_rotation != 0:
                 frame = apply_rotation(frame, current_rotation)
+
+            # Terapkan mode cermin (mirror horizontal) jika aktif
+            if is_mirrored:
+                frame = cv2.flip(frame, 1)
 
             # Opsional resize frame jika resolusi terlalu besar untuk mempercepat proses CPU
             if args.width and args.height and not isinstance(source, int):
@@ -262,6 +281,7 @@ def main():
                 show_age=show_age,
                 show_gender=show_gender,
                 rotation=current_rotation,
+                is_mirrored=is_mirrored,
             )
 
             # Tampilkan pesan status sementara jika ada (misal setelah registrasi wajah)
@@ -309,6 +329,12 @@ def main():
             elif key in [ord("g"), ord("G")]:
                 show_gender = not show_gender
                 status_message = f"Pendeteksi Gender: {'AKTIF' if show_gender else 'NONAKTIF'}"
+                status_time = time.time()
+                print(f"[INFO] {status_message}")
+
+            elif key in [ord("m"), ord("M")]:
+                is_mirrored = not is_mirrored
+                status_message = f"Mode Cermin (Mirror): {'AKTIF' if is_mirrored else 'NONAKTIF'}"
                 status_time = time.time()
                 print(f"[INFO] {status_message}")
 

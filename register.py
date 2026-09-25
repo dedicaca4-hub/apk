@@ -42,7 +42,7 @@ def apply_rotation(frame: np.ndarray, angle: int) -> np.ndarray:
     return frame
 
 
-def capture_from_camera(source, person_name: str, targets_dir: str = "targets", model_name: str = "buffalo_sc", rotate: int = 0):
+def capture_from_camera(source, person_name: str, targets_dir: str = "targets", model_name: str = "buffalo_sc", rotate: int = 0, mirror: bool = False):
     """Membuka kamera dengan preview interaktif untuk mengambil foto wajah terbaik."""
     print(f"\n[INFO] Menginisialisasi model InsightFace ({model_name})...")
     face_system = FaceSystem(model_name=model_name, targets_dir=targets_dir)
@@ -55,6 +55,7 @@ def capture_from_camera(source, person_name: str, targets_dir: str = "targets", 
         return False
 
     current_rotation = rotate % 360
+    is_mirrored = mirror
     window_name = f"Pendaftaran Wajah: {person_name} (Tekan SPASI untuk Ambil Foto)"
     cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
 
@@ -62,6 +63,7 @@ def capture_from_camera(source, person_name: str, targets_dir: str = "targets", 
     print("Instruksi:")
     print("  • Posisikan wajah Anda di tengah layar dan hadap ke depan.")
     print("  • Tekan [SPASI] untuk mengambil foto.")
+    print("  • Tekan [M] untuk mode cermin (mirror horizontal).")
     print("  • Tekan [O] untuk memutar rotasi layar (-90° / 90° live).")
     print("  • Tekan [Q] atau [ESC] untuk membatalkan.\n")
 
@@ -73,6 +75,9 @@ def capture_from_camera(source, person_name: str, targets_dir: str = "targets", 
 
         if current_rotation != 0:
             frame = apply_rotation(frame, current_rotation)
+
+        if is_mirrored:
+            frame = cv2.flip(frame, 1)
 
         h, w, _ = frame.shape
         display = frame.copy()
@@ -99,8 +104,9 @@ def capture_from_camera(source, person_name: str, targets_dir: str = "targets", 
 
         # Banner info atas
         rot_label = f" | Rot: {current_rotation}°" if current_rotation != 0 else ""
+        mir_label = " | Cermin" if is_mirrored else ""
         cv2.rectangle(display, (0, 0), (w, 50), (20, 20, 20), -1)
-        cv2.putText(display, f"Mendaftarkan: {person_name}{rot_label}", (15, 25), cv2.FONT_HERSHEY_DUPLEX, 0.6, (255, 255, 255), 1)
+        cv2.putText(display, f"Mendaftarkan: {person_name}{rot_label}{mir_label}", (15, 25), cv2.FONT_HERSHEY_DUPLEX, 0.6, (255, 255, 255), 1)
         cv2.putText(display, status_text, (15, 43), cv2.FONT_HERSHEY_DUPLEX, 0.45, status_color, 1)
 
         cv2.imshow(window_name, display)
@@ -112,6 +118,9 @@ def capture_from_camera(source, person_name: str, targets_dir: str = "targets", 
         elif key in [ord("o"), ord("O")]:
             current_rotation = (current_rotation - 90) % 360
             print(f"[INFO] Rotasi diubah ke: {current_rotation}°")
+        elif key in [ord("m"), ord("M")]:
+            is_mirrored = not is_mirrored
+            print(f"[INFO] Mode cermin diubah ke: {'AKTIF' if is_mirrored else 'NONAKTIF'}")
         elif key == 32:  # SPASI
             if len(faces) == 0:
                 print("[WARNING] Tidak ada wajah terdeteksi! Mohon hadap ke kamera.")
@@ -206,7 +215,7 @@ def list_registered_faces(targets_dir: str = "targets"):
     print("=" * 50 + "\n")
 
 
-def interactive_menu():
+def interactive_menu(targets_dir: str = "targets"):
     """Tampilan menu interaktif jika skrip dijalankan tanpa argumen."""
     while True:
         print("\n" + "=" * 50)
@@ -227,7 +236,7 @@ def interactive_menu():
             source = input(">> Sumber kamera (tekan Enter untuk Webcam laptop default / isi URL HP): ").strip()
             if not source:
                 source = "0"
-            capture_from_camera(source, name)
+            capture_from_camera(source, name, targets_dir=targets_dir)
 
         elif choice == "2":
             file_path = input(">> Masukkan path file foto (misal: C:/foto/budi.jpg): ").strip(' "\'')
@@ -237,10 +246,10 @@ def interactive_menu():
             if not name:
                 print("[ERROR] Nama tidak boleh kosong!")
                 continue
-            import_from_file(file_path, name)
+            import_from_file(file_path, name, targets_dir=targets_dir)
 
         elif choice == "3":
-            list_registered_faces()
+            list_registered_faces(targets_dir=targets_dir)
 
         elif choice == "4":
             print("[INFO] Keluar dari menu.")
@@ -254,6 +263,7 @@ def main():
     parser.add_argument("--name", type=str, default=None, help="Nama orang yang akan didaftarkan")
     parser.add_argument("--source", type=str, default="0", help="Sumber kamera (0 untuk webcam, atau URL HP)")
     parser.add_argument("--rotate", type=int, default=0, choices=[0, 90, 180, 270, -90, -180, -270], help="Rotasi kamera dalam derajat (90, 180, 270, atau -90)")
+    parser.add_argument("--mirror", action="store_true", help="Mode cermin / balik horizontal saat pendaftaran webcam")
     parser.add_argument("--import", dest="import_path", type=str, default=None, help="Path file foto untuk diimpor")
     parser.add_argument("--targets", type=str, default="targets", help="Direktori database target")
     parser.add_argument("--list", action="store_true", help="Tampilkan daftar wajah terdaftar")
@@ -267,9 +277,9 @@ def main():
             args.name = Path(args.import_path).stem
         import_from_file(args.import_path, args.name, args.targets)
     elif args.name:
-        capture_from_camera(args.source, args.name, args.targets, rotate=args.rotate)
+        capture_from_camera(args.source, args.name, args.targets, rotate=args.rotate, mirror=args.mirror)
     else:
-        interactive_menu()
+        interactive_menu(args.targets)
 
 
 if __name__ == "__main__":

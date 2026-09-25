@@ -5,7 +5,7 @@ Memungkinkan smartphone terhubung via Wi-Fi lokal dan mendapatkan akses kamera s
 
 Penggunaan:
     python pwa_server.py
-    python pwa_server.py --port 8443
+    python pwa_server.py --port 50050
     python pwa_server.py --http   (mode HTTP biasa tanpa SSL)
 """
 

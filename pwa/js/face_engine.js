@@ -121,11 +121,18 @@ class FaceEngine {
     this.cropCanvas.width = targetW;
     this.cropCanvas.height = targetH;
 
-    // Pastikan koordinat crop di dalam batas video
-    const sx = Math.max(0, box.x);
-    const sy = Math.max(0, box.y);
-    const sw = Math.min(box.width, videoElement.videoWidth - sx);
-    const sh = Math.min(box.height, videoElement.videoHeight - sy);
+    const vw = videoElement.videoWidth || 640;
+    const vh = videoElement.videoHeight || 480;
+
+    // Pastikan crop persegi proporsional di sekitar pusat wajah agar bentuk wajah tidak gepeng/terdistorsi
+    const maxDim = Math.max(box.width, box.height) * 1.15;
+    const cx = box.x + box.width / 2;
+    const cy = box.y + box.height / 2;
+
+    const sx = Math.max(0, Math.min(vw - maxDim, cx - maxDim / 2));
+    const sy = Math.max(0, Math.min(vh - maxDim, cy - maxDim / 2));
+    const sw = Math.min(maxDim, vw - sx);
+    const sh = Math.min(maxDim, vh - sy);
 
     this.cropCtx.drawImage(videoElement, sx, sy, sw, sh, 0, 0, targetW, targetH);
     const imgData = this.cropCtx.getImageData(0, 0, targetW, targetH);
@@ -161,16 +168,15 @@ class FaceEngine {
       const pred = output.fc1.data; // Float32Array[3] -> [female_prob, male_prob, normalized_age]
 
       const isMale = pred[1] > pred[0];
-      const gender = isMale ? 'L' : 'P';
       const rawAge = pred[2] * 100.0;
 
-      // Stabilkan usia dengan filter EMA
-      const smoothedAge = this._smoothAge(box, rawAge);
+      // Stabilkan usia dan gender dengan filter multi-frame tracking
+      const tracked = this._smoothAgeAndGender(box, rawAge, isMale);
 
       return {
-        age: smoothedAge,
+        age: tracked.age,
         rawAge: Math.round(rawAge),
-        gender: gender
+        gender: tracked.gender
       };
     } catch (e) {
       console.warn('[FaceEngine] Error estimasi usia:', e);
@@ -230,12 +236,12 @@ class FaceEngine {
   }
 
   /**
-   * Filter Exponential Moving Average (EMA) untuk menstabilkan pembacaan usia di kamera live.
+   * Filter Exponential Moving Average (EMA) untuk menstabilkan pembacaan usia dan gender di kamera live.
    */
-  _smoothAge(box, rawAge) {
+  _smoothAgeAndGender(box, rawAge, isMale) {
     this.frameIndex++;
     let bestId = null;
-    let bestIoU = 0.35;
+    let bestIoU = 0.30;
 
     for (const [id, track] of this.ageTracks.entries()) {
       const iou = this._calcIoU(box, track.box);
@@ -245,15 +251,33 @@ class FaceEngine {
       }
     }
 
+    const maleVal = isMale ? 1.0 : 0.0;
+
     if (bestId !== null) {
       const prev = this.ageTracks.get(bestId);
-      // 82% bobot riwayat sebelumnya + 18% bobot frame baru
-      const smoothed = 0.82 * prev.age + 0.18 * rawAge;
-      this.ageTracks.set(bestId, { box: box, age: smoothed, lastSeen: this.frameIndex });
-      return Math.round(smoothed);
+      // 85% bobot riwayat sebelumnya + 15% bobot frame baru
+      const smoothedAge = 0.85 * prev.age + 0.15 * rawAge;
+      const smoothedMaleProb = 0.85 * prev.maleProb + 0.15 * maleVal;
+
+      this.ageTracks.set(bestId, {
+        box: box,
+        age: smoothedAge,
+        maleProb: smoothedMaleProb,
+        lastSeen: this.frameIndex
+      });
+
+      return {
+        age: Math.round(smoothedAge),
+        gender: smoothedMaleProb >= 0.5 ? 'L' : 'P'
+      };
     } else {
       const newId = this.nextTrackId++;
-      this.ageTracks.set(newId, { box: box, age: rawAge, lastSeen: this.frameIndex });
+      this.ageTracks.set(newId, {
+        box: box,
+        age: rawAge,
+        maleProb: maleVal,
+        lastSeen: this.frameIndex
+      });
 
       // Bersihkan track yang sudah tidak terlihat
       if (this.frameIndex % 30 === 0) {
@@ -263,7 +287,11 @@ class FaceEngine {
           }
         }
       }
-      return Math.round(rawAge);
+
+      return {
+        age: Math.round(rawAge),
+        gender: isMale ? 'L' : 'P'
+      };
     }
   }
 
