@@ -67,7 +67,7 @@ def apply_rotation(frame: np.ndarray, angle: int) -> np.ndarray:
 
 def parse_arguments():
     parser = argparse.ArgumentParser(
-        description="Aplikasi Real-Time Face Recognition (InsightFace)",
+        description="FaceAI - Aplikasi Real-Time Face Recognition & Age Detector (InsightFace)",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     parser.add_argument(
@@ -142,7 +142,7 @@ def main():
     args = parse_arguments()
 
     print("\n" + "=" * 60)
-    print("      FACE RECOGNITION SYSTEM - INSIGHTFACE")
+    print("             FaceAI - REAL-TIME FACE RECOGNITION")
     print("=" * 60)
     print(f"• Model        : {args.model}")
     print(f"• Threshold    : {args.threshold}")
@@ -192,7 +192,7 @@ def main():
             print(f"3. Buka URL {args.source} di browser laptop untuk menguji apakah streaming aktif.")
         sys.exit(1)
 
-    window_name = f"Face Recognition - InsightFace ({args.model})"
+    window_name = f"FaceAI ({args.model})"
     cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
 
     print("\n[READY] Aplikasi berjalan!")

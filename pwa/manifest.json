@@ -1,5 +1,5 @@
 {
-  "name": "FaceAI - Face Recognition & Age Detector",
+  "name": "FaceAI",
   "short_name": "FaceAI",
   "description": "Aplikasi Real-Time Face Recognition, Estimasi Usia & Gender On-Device",
   "start_url": "./",

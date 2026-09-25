@@ -433,11 +433,11 @@ class FaceSystem:
             # Garis pemisah bawah HUD tipis
             cv2.line(out, (0, hud_h), (w, hud_h), (60, 70, 80), 1)
 
-            # Info kiri: FPS & Model & Rotasi & Status Usia
+            # Info kiri: Nama FaceAI & FPS & Model & Rotasi & Status Usia
             fps_str = f"FPS: {fps:.1f}" if fps is not None else "FPS: --"
             rot_str = f"  |  Rot: {rotation}°" if rotation != 0 else ""
             age_str = f"  |  Usia: {'ON' if show_age else 'OFF'}"
-            info_left = f"{fps_str}  |  Model: {self.model_name}{rot_str}{age_str}  |  Thresh: {self.threshold:.2f}"
+            info_left = f"FaceAI  |  {fps_str}  |  {self.model_name}{rot_str}{age_str}  |  Thresh: {self.threshold:.2f}"
             cv2.putText(out, info_left, (12, 23), cv2.FONT_HERSHEY_DUPLEX, 0.45, (220, 220, 220), 1, cv2.LINE_AA)
 
             # Info kanan: Database & Source

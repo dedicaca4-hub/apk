@@ -1,11 +1,10 @@
-# x - Aplikasi Real-Time Face Recognition (InsightFace)
-
+# FaceAI - Real-Time Face Recognition & Age Detector
 
 ```sh
 python app.py --model buffalo_l --source http://192.168.1.50:50050/video
 ```
 
-Aplikasi pengenalan wajah (*face recognition*) real-time berbasis **Python** dan **InsightFace**. Aplikasi ini dirancang agar dapat langsung digunakan menggunakan **webcam laptop** ataupun **kamera HP** (via Wi-Fi / IP Webcam stream), dengan performa tinggi dan akurat bahkan di CPU laptop biasa.
+**FaceAI** adalah aplikasi pengenalan wajah (*face recognition*), deteksi usia, dan estimasi gender real-time berbasis **Python**, **InsightFace**, serta tersedia dalam versi **Android Standalone APK / PWA**. Aplikasi ini dirancang agar dapat langsung digunakan menggunakan **webcam laptop** ataupun **kamera HP** (via Wi-Fi / IP Webcam stream), dengan performa tinggi dan akurat bahkan di CPU laptop biasa.
 
 ---
 
